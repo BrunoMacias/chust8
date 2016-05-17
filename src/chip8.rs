@@ -1,6 +1,10 @@
 use memory::Memory;
 use registers::Registers;
 
+use std::path::Path;
+use std::fs::File;
+use std::io::Read;
+
 const FONT: [u8; 80] = [
     0xF0, 0x90, 0x90, 0x90, 0xF0,
     0x20, 0x60, 0x20, 0x20, 0x70,
@@ -21,7 +25,7 @@ const FONT: [u8; 80] = [
 ];
 
 pub struct Chip8 {
-    mem: Memory,
+    pub mem: Memory,
     reg: Registers,
 }
 
@@ -30,6 +34,37 @@ impl Chip8 {
         Chip8 {
             mem: Memory::new_with_fonts(&FONT),
             reg: Registers::new(),
+        }
+    }
+
+    pub fn load(&mut self, filepath: &str){
+        let path = Path::new(&filepath);
+    
+        let mut buffer = [0u8; 3_584 ];
+        let mut file = match File::open(&path) {
+            Ok(file) => file,
+            Err(_) => {
+                panic!("Unable to open file: {}", filepath);
+            }
+        };
+
+        match file.read(&mut buffer){
+            Ok(len) => {
+                println!("filelen:  {}", len);
+
+            }
+            Err(_) => {
+                panic!("file read error");
+
+            }
+        }
+
+
+        
+        let mut offset = 0x200;
+        for &bytes in buffer.iter() {
+            self.mem.memory[offset] = bytes;
+            offset += 1;
         }
     }
 }

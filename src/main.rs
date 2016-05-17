@@ -4,7 +4,15 @@ pub mod registers;
 
 use chip8::Chip8;
 
+use std::env;
+
 fn main() {
     println!("Hello, world");
-    let cpu = Chip8::new();
+    let filename: &str = &env::args().nth(1).unwrap()[..];
+    println!("Filename: {}",filename);
+    
+    let mut cpu = Chip8::new();
+    
+    
+    cpu.load(filename);
 }
