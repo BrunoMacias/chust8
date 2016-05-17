@@ -14,5 +14,5 @@ fn main() {
     let mut cpu = Chip8::new();
     
     
-    cpu.load(filename);
+    cpu.open_file(filename);
 }

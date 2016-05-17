@@ -26,7 +26,7 @@ const FONT: [u8; 80] = [
 
 pub struct Chip8 {
     pub mem: Memory,
-    reg: Registers,
+    pub reg: Registers,
 }
 
 impl Chip8 {
@@ -37,34 +37,31 @@ impl Chip8 {
         }
     }
 
-    pub fn load(&mut self, filepath: &str){
+
+    pub fn open_file(&mut self, filepath: &str){ 
         let path = Path::new(&filepath);
-    
-        let mut buffer = [0u8; 3_584 ];
-        let mut file = match File::open(&path) {
+        let file = match File::open(&path){
             Ok(file) => file,
-            Err(_) => {
-                panic!("Unable to open file: {}", filepath);
-            }
+            Err(_) => panic!("Unable to open file: {}", filepath), 
         };
+        self.read_file(file);
+    }
 
-        match file.read(&mut buffer){
-            Ok(len) => {
-                println!("filelen:  {}", len);
+    pub fn read_file(&mut self, mut file: File){
+        let mut file_buffer: [u8; 3_584] = [0; 3_584];
+        match file.read(&mut file_buffer){
+            Ok(len) => println!("filelen: {}", len),
+            Err(_) => panic!("file read error"),
+        };
+        self.copy_rom(file_buffer);
+    }
 
-            }
-            Err(_) => {
-                panic!("file read error");
-
-            }
-        }
-
-
-        
+    pub fn copy_rom(&mut self, mut file_buffer: [u8; 3_584]){ 
         let mut offset = 0x200;
-        for &bytes in buffer.iter() {
+        for &bytes in file_buffer.iter() {
             self.mem.memory[offset] = bytes;
             offset += 1;
         }
     }
+
 }
