@@ -1,5 +1,3 @@
-#[allow(dead_code)]
-#[allow(non_snake_case)]
 use memory::Memory;
 use registers::Registers;
 
@@ -70,19 +68,13 @@ impl Chip8 {
 
     pub fn open_file(&mut self, filepath: &str) {
         let path = Path::new(&filepath);
-        let file = match File::open(&path) {
-            Ok(file) => file,
-            Err(_) => panic!("Unable to open file: {}", filepath),
-        };
+        let file = File::open(&path).unwrap();
         self.read_file(file);
     }
 
     pub fn read_file(&mut self, mut file: File) {
         let mut file_buffer: [u8; 3_584] = [0; 3_584];
-        match file.read(&mut file_buffer) {
-            Ok(len) => println!("filelen: {}", len),
-            Err(_) => panic!("file read error"),
-        };
+        file.read(&mut file_buffer).unwrap();
         self.copy_rom(file_buffer);
     }
 
