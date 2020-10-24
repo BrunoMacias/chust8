@@ -11,6 +11,9 @@ use minifb::{Key, Scale, Window, WindowOptions, KeyRepeat};
 use rand;
 use rand::Rng;
 
+// keep all our instructions for debugging 
+use ringbuffer::{AllocRingBuffer, RingBuffer};
+
 const FONT: [u8; 80] = [
     0xF0, 0x90, 0x90, 0x90, 0xF0, 0x20, 0x60, 0x20, 0x20, 0x70, 0xF0, 0x10, 0xF0, 0x80, 0xF0, 0xF0,
     0x10, 0xF0, 0x10, 0xF0, 0x90, 0x90, 0xF0, 0x10, 0x10, 0xF0, 0x80, 0xF0, 0x10, 0xF0, 0xF0, 0x80,
@@ -43,6 +46,8 @@ pub struct Chip8 {
     pub keyboard: KeyPad,
     pub delay_timer:u8,
     pub sound_timer:u8,
+    pub ring: AllocRingBuffer<String>,
+    pub stack: Vec<usize>
 }
 
 impl Chip8 {
@@ -67,6 +72,8 @@ impl Chip8 {
             keyboard: KeyPad::new(),
             delay_timer: 0,
             sound_timer: 0,
+            ring: AllocRingBuffer::with_capacity(100),
+            stack: vec![],
         }
     }
 
@@ -133,14 +140,11 @@ impl Chip8 {
 
         if collision {
             self.reg.v[0x0F] = 0x1;
-        } else {
+        } 
+        else {
             self.reg.v[0x0F] = 0x0;
         }
-        //let mut buf: Vec<u32> = vec![0xffffffff; 64 * 32];
         self.window.update_with_buffer(&self.buffer, 2, 2).unwrap();
-        //let ten = time::Duration::from_millis(1000);
-        //thread::sleep(ten);
-        //self.window.update();
     }
 
     pub fn read_instruction(&mut self) -> u16 {
@@ -148,6 +152,9 @@ impl Chip8 {
         let bottom = self.mem.memory[pc as usize];
         let top = self.mem.memory[(pc + 1) as usize];
         let instruction = (bottom as u16) << 8 | (top as u16);
+
+        let s = format!("{:X}", instruction);
+        self.ring.push(s);
 
         println!(
             "bottom: {:X}, top: {:X}, pc: {:X}, inst: {:X}",
@@ -161,7 +168,7 @@ impl Chip8 {
             self.decode_instruction();
             //let ten = time::Duration::from_millis(1000);
             //thread::sleep(ten);
-            //let _ = self.window.update_with_buffer(&self.buffer);
+            //self.window.update_with_buffer(&self.buffer,10, 10).unwrap();
         }
     }
 
@@ -171,9 +178,10 @@ impl Chip8 {
     }
 
     fn op_0_0_e_e(&mut self) -> PC {
-        self.reg.stack_pointer -= 1;
-        let jump = self.reg.stack_pointer as usize;
-        PC::Jump(jump)
+        if let Some(ret) = self.stack.pop() {
+            self.reg.program_counter = ret as u16;
+        };
+        PC::Next
     }
 
     fn op_1_n_n_n(&mut self, nnn: usize) -> PC {
@@ -373,39 +381,39 @@ impl Chip8 {
         let kk = instruction & 0x00FF;
         let nnn = instruction & 0x0FFF;
 
-        let pc_next = match bits {
-            (0x0, 0x0, 0xE, 0x0) => self.op_0_0_e_0(),
-            (0x0, 0x0, 0xE, 0xE) => self.op_0_0_e_e(),
-            (0x1, _, _, _) => self.op_1_n_n_n(nnn as usize),
-            (0x2, _, _, _) => self.op_2_n_n_n(nnn as usize),
-            (0x3, _, _, _) => self.op_3_x_k_k(x as usize, kk as usize),
-            (0x4, _, _, _) => self.op_4_x_k_k(x as usize, kk as usize),
-            (0x5, _, _, 0x0) => self.op_5_x_y_0(x as usize, y as usize),
-            (0x6, _, _, _) => self.op_6_x_k_k(x as usize, kk as usize),
-            (0x7, _, _, _) => self.op_7_x_k_k(x as usize, kk as usize),
-            (0x8, _, _, _) => self.op_8_x_y_z(x as usize, y as usize, z),
-            (0x9, _, _, _) => self.op_9_x_y_0(x as usize, y as usize),
-            (0xA, _, _, _) => self.op_a_n_n_n(nnn),
-            (0xB, _, _, _) => self.op_b_n_n_n(nnn),
-            (0xC, _, _, _) => self.op_c_x_k_k(x as usize, kk as usize),
-            (0xD, _, _, _) => self.op_d_x_y_z(x as usize, y as usize, z),
-            // I dont think we need to pass X into here?
-            (0xE, _, 0x9, 0xE) => self.op_e_x_9_e(x as usize),
-            (0xE, _, 0xA, 0x1) => self.op_e_x_a_1(x as usize),
-            (0xF, _, 0x0, 0x7) => self.op_f_x_0_7(x as usize),
-            (0xF, _, 0x0, 0xA) => self.op_f_x_0_a(x as usize),
-            (0xF, _, 0x1, 0x5) => self.op_f_x_1_5(x as usize),
-            (0xF, _, 0x1, 0x8) => self.op_f_x_1_8(x as usize),
-            (0xF, _, 0x1, 0xe) => self.op_f_x_1_e(x as usize),
-            (0xF, _, 0x2, 0x9) => self.op_f_x_2_9(x as usize),
-            (0xF, _, 0x3, 0x3) => self.op_f_x_3_3(x as usize),
-            (0xF, _, 0x5, 0x5) => self.op_f_x_5_5(x as usize),
-            (0xF, _, 0x6, 0x5) => self.op_f_x_6_5(x as usize),
-            _ => {
-                println!("unknown instructions");
-                PC::Next
-            }
-        };
+        let pc_next = 
+            match bits {
+                (0x0, 0x0, 0xE, 0x0) => self.op_0_0_e_0(),
+                (0x0, 0x0, 0xE, 0xE) => self.op_0_0_e_e(),
+                (0x1, _, _, _) => self.op_1_n_n_n(nnn as usize),
+                (0x2, _, _, _) => self.op_2_n_n_n(nnn as usize),
+                (0x3, _, _, _) => self.op_3_x_k_k(x as usize, kk as usize),
+                (0x4, _, _, _) => self.op_4_x_k_k(x as usize, kk as usize),
+                (0x5, _, _, 0x0) => self.op_5_x_y_0(x as usize, y as usize),
+                (0x6, _, _, _) => self.op_6_x_k_k(x as usize, kk as usize),
+                (0x7, _, _, _) => self.op_7_x_k_k(x as usize, kk as usize),
+                (0x8, _, _, _) => self.op_8_x_y_z(x as usize, y as usize, z),
+                (0x9, _, _, _) => self.op_9_x_y_0(x as usize, y as usize),
+                (0xA, _, _, _) => self.op_a_n_n_n(nnn),
+                (0xB, _, _, _) => self.op_b_n_n_n(nnn),
+                (0xC, _, _, _) => self.op_c_x_k_k(x as usize, kk as usize),
+                (0xD, _, _, _) => self.op_d_x_y_z(x as usize, y as usize, z),
+                (0xE, _, 0x9, 0xE) => self.op_e_x_9_e(x as usize),
+                (0xE, _, 0xA, 0x1) => self.op_e_x_a_1(x as usize),
+                (0xF, _, 0x0, 0x7) => self.op_f_x_0_7(x as usize),
+                (0xF, _, 0x0, 0xA) => self.op_f_x_0_a(x as usize),
+                (0xF, _, 0x1, 0x5) => self.op_f_x_1_5(x as usize),
+                (0xF, _, 0x1, 0x8) => self.op_f_x_1_8(x as usize),
+                (0xF, _, 0x1, 0xe) => self.op_f_x_1_e(x as usize),
+                (0xF, _, 0x2, 0x9) => self.op_f_x_2_9(x as usize),
+                (0xF, _, 0x3, 0x3) => self.op_f_x_3_3(x as usize),
+                (0xF, _, 0x5, 0x5) => self.op_f_x_5_5(x as usize),
+                (0xF, _, 0x6, 0x5) => self.op_f_x_6_5(x as usize),
+                _ => {
+                    println!("unknown instructions");
+                    PC::Next
+                }
+            };
 
         match pc_next {
             PC::Next => self.reg.program_counter += 2,

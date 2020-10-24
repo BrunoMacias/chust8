@@ -6,3 +6,4 @@ authors = ["Bruno Macias <brunoemacias@gmail.com>"]
 [dependencies]
 rand = "0.5.*"
 minifb = "0.19.1"
+ringbuffer = "0.3.0"

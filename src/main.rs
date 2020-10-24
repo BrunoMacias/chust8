@@ -1,5 +1,6 @@
 extern crate minifb;
 extern crate rand;
+extern crate ringbuffer;
 
 pub mod chip8;
 pub mod keyboard;
