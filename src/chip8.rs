@@ -7,7 +7,7 @@ use std::io::Read;
 use std::path::Path;
 use std::{thread, time};
 
-use minifb::{Key, Scale, Window, WindowOptions};
+use minifb::{Key, Scale, Window, WindowOptions, KeyRepeat};
 use rand;
 use rand::Rng;
 
@@ -41,6 +41,8 @@ pub struct Chip8 {
     pub reg: Registers,
     buffer: Vec<u32>,
     pub keyboard: KeyPad,
+    pub delay_timer:u8,
+    pub sound_timer:u8,
 }
 
 impl Chip8 {
@@ -63,6 +65,8 @@ impl Chip8 {
             )
             .unwrap(),
             keyboard: KeyPad::new(),
+            delay_timer: 0,
+            sound_timer: 0,
         }
     }
 
@@ -295,6 +299,63 @@ impl Chip8 {
         PC::skip_if(!self.keyboard.is_button_pressed(button))
     }
 
+    fn op_f_x_0_7(&mut self, x: usize) -> PC {
+        self.reg.v[x] = self.delay_timer;
+        PC::Next
+    }
+
+    fn op_f_x_0_a(&mut self, x: usize) -> PC {
+        let key = self.window.get_keys_pressed(KeyRepeat::No).unwrap().first().unwrap().clone();
+        let button  = Button::from_key(key);
+        self.reg.v[x] = Button::to_u8(button);
+        PC::Next
+    }
+
+    fn op_f_x_1_5(&mut self, x: usize) -> PC {
+        self.delay_timer = self.reg.v[x];
+        PC::Next
+    }
+
+    fn op_f_x_1_8(&mut self, x: usize) -> PC {
+        self.sound_timer = self.reg.v[x];
+        PC::Next
+    }
+
+    fn op_f_x_1_e(&mut self, x: usize) -> PC {
+        self.reg.vI += self.reg.v[x] as u16;
+        PC::Next
+    }
+
+    fn op_f_x_2_9(&mut self, x: usize) -> PC {
+        // This is wrong?
+        self.reg.vI = (self.reg.v[x] * 5) as u16;
+        PC::Next
+    }
+
+    fn op_f_x_3_3(&mut self, x: usize) -> PC {
+        let val = self.reg.v[x];
+        self.mem.memory[self.reg.vI as usize] = val / 100;
+        self.mem.memory[(self.reg.vI + 1) as usize] = (val / 10) % 10;
+        self.mem.memory[(self.reg.vI + 2) as usize] = (val % 10) % 10;
+        PC::Next
+    }
+
+    fn op_f_x_5_5(&mut self, x: usize) -> PC {
+        let address = self.reg.vI;
+        for idx in 0..x {
+            self.mem.memory[(address + idx as u16) as usize] = self.reg.v[idx as usize] as u8;
+        }
+
+        PC::Next
+    }
+    fn op_f_x_6_5(&mut self, x: usize) -> PC {
+        let address = self.reg.vI;
+        for idx in 0..x {
+            self.reg.v[idx as usize] = self.mem.memory[(address + idx as u16) as usize] as u8;
+        }
+        PC::Next
+    }
+
     // Match on the first 4 bit of the instruction
     // Does not advance the program counter
     pub fn decode_instruction(&mut self) {
@@ -328,10 +389,20 @@ impl Chip8 {
             (0xB, _, _, _) => self.op_b_n_n_n(nnn),
             (0xC, _, _, _) => self.op_c_x_k_k(x as usize, kk as usize),
             (0xD, _, _, _) => self.op_d_x_y_z(x as usize, y as usize, z),
+            // I dont think we need to pass X into here?
             (0xE, _, 0x9, 0xE) => self.op_e_x_9_e(x as usize),
             (0xE, _, 0xA, 0x1) => self.op_e_x_a_1(x as usize),
+            (0xF, _, 0x0, 0x7) => self.op_f_x_0_7(x as usize),
+            (0xF, _, 0x0, 0xA) => self.op_f_x_0_a(x as usize),
+            (0xF, _, 0x1, 0x5) => self.op_f_x_1_5(x as usize),
+            (0xF, _, 0x1, 0x8) => self.op_f_x_1_8(x as usize),
+            (0xF, _, 0x1, 0xe) => self.op_f_x_1_e(x as usize),
+            (0xF, _, 0x2, 0x9) => self.op_f_x_2_9(x as usize),
+            (0xF, _, 0x3, 0x3) => self.op_f_x_3_3(x as usize),
+            (0xF, _, 0x5, 0x5) => self.op_f_x_5_5(x as usize),
+            (0xF, _, 0x6, 0x5) => self.op_f_x_6_5(x as usize),
             _ => {
-                println!("the end is neigh");
+                println!("unknown instructions");
                 PC::Next
             }
         };

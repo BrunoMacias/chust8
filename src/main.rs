@@ -2,9 +2,9 @@ extern crate minifb;
 extern crate rand;
 
 pub mod chip8;
+pub mod keyboard;
 pub mod memory;
 pub mod registers;
-pub mod keyboard;
 
 use chip8::Chip8;
 

@@ -1,5 +1,7 @@
 #[allow(non_snake_case)]
 
+use minifb::{Key};
+
 /*
 1	2	3	C
 4	5	6	D
@@ -27,6 +29,30 @@ pub enum Button {
 }
 
 impl Button {
+    pub fn from_key(key: Key) -> Button {
+        match key {
+            Key::Key0 => Button::One,
+            Key::Key1 => Button::Two,
+            Key::Key2 => Button::Three,
+            Key::Key3 => Button::Four,
+            Key::Q => Button::Q,
+            Key::W => Button::W,
+            Key::E => Button::E,
+            Key::R => Button::R,
+            Key::A => Button::A,
+            Key::S => Button::S,
+            Key::D => Button::D,
+            Key::F => Button::F,
+            Key::Z => Button::Z,
+            Key::X => Button::X,
+            Key::C => Button::C,
+            Key::V => Button::V,
+            // Probably shouldn't actually panic
+            _ => panic!("unknown key pressed"),
+        }
+
+    }
+
     pub fn from_u8(key: u8) -> Button {
         match key {
             0 => Button::One,
@@ -45,6 +71,30 @@ impl Button {
             13 => Button::X,
             14 => Button::C,
             15 => Button::V,
+            // Probably shouldn't actually panic
+            _ => panic!("unknown key pressed"),
+        }
+    }
+
+    pub fn to_u8(button: Button) -> u8 {
+        match button {
+            Button::One => 0,
+            Button::Two => 1,
+            Button::Three => 2,
+            Button::Four => 3,
+            Button::Q => 4,
+            Button::W => 5,
+            Button::E => 6,
+            Button::R => 7,
+            Button::A => 8,
+            Button::S => 9,
+            Button::D => 10,
+            Button::F => 11,
+            Button::Z => 12,
+            Button::X => 13,
+            Button::C => 14,
+            Button::V => 15,
+            // Probably shouldn't actually panic
             _ => panic!("unknown key pressed"),
         }
     }
