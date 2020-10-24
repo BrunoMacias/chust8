@@ -5,4 +5,4 @@ authors = ["Bruno Macias <brunoemacias@gmail.com>"]
 
 [dependencies]
 rand = "0.5.*"
-minifb = "*"
+minifb = "0.19.1"

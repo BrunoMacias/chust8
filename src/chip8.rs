@@ -60,6 +60,7 @@ impl Chip8 {
                     title: true,
                     resize: false,
                     scale: Scale::X8,
+                    ..WindowOptions::default()
                 },
             )
             .unwrap(),
@@ -108,9 +109,10 @@ impl Chip8 {
      */
     pub fn draw(&mut self, x: usize, y: usize, n: usize) {
         let mem_start = self.reg.vI as usize;
-        let mem_end = (self.reg.vI + (n as u16)) as usize;
+        let _mem_end = (self.reg.vI + (n as u16)) as usize;
         let height = 32;
         let width = 64;
+        let color = 0xff;
 
         let mut collision = false;
         for byte in 0..n {
@@ -126,10 +128,10 @@ impl Chip8 {
                     if self.buffer[pixel] == 0xFFFF_FFFF {
                         collision = true;
                     }
-                    self.buffer[pixel] ^ 0xFFFF_FFFF;
+                    //self.buffer[pixel] ^ 0xFFFF_FFFF;
                 }
-                //let color = self.reg.v[0x0F] |= color & self.buffer[pixel] as u8;
-                //self.buffer[pixel] = if color == 1 { 0xFFFF_FFFF } else { 0x0 }
+                self.reg.v[0x0F] |= color & self.buffer[pixel] as u8;
+                self.buffer[pixel] = if color == 1 { 0xFFFF_FFFF } else { 0x0 }
             }
         }
 
@@ -139,9 +141,9 @@ impl Chip8 {
             self.reg.v[0x0F] = 0x0;
         }
         //let mut buf: Vec<u32> = vec![0xffffffff; 64 * 32];
-        self.window.update_with_buffer(&self.buffer).unwrap();
-        let ten = time::Duration::from_millis(1000);
-        thread::sleep(ten);
+        self.window.update_with_buffer(&self.buffer, 2, 2).unwrap();
+        //let ten = time::Duration::from_millis(1000);
+        //thread::sleep(ten);
         //self.window.update();
     }
 
@@ -161,8 +163,8 @@ impl Chip8 {
     pub fn run(&mut self) {
         while self.window.is_open() && !self.window.is_key_down(Key::Escape) {
             self.decode_instruction();
-            let ten = time::Duration::from_millis(1000);
-            thread::sleep(ten);
+            //let ten = time::Duration::from_millis(1000);
+            //thread::sleep(ten);
             //let _ = self.window.update_with_buffer(&self.buffer);
         }
     }
