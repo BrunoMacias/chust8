@@ -93,9 +93,7 @@ impl Button {
             Button::Z => 12,
             Button::X => 13,
             Button::C => 14,
-            Button::V => 15,
-            // Probably shouldn't actually panic
-            _ => panic!("unknown key pressed"),
+            Button::V => 15
         }
     }
 }

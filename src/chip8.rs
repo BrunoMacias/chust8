@@ -5,7 +5,6 @@ use keyboard::{Button, KeyPad};
 use std::fs::File;
 use std::io::Read;
 use std::path::Path;
-use std::{thread, time};
 
 use minifb::{Key, Scale, Window, WindowOptions, KeyRepeat};
 use rand;
